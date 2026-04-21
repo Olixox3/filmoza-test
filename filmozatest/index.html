@@ -1,14 +1,27 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Moja Biblioteka GoFile</title>
+    <title>Biblioteka z Konsolą Błędów</title>
     <style>
         body { background: #121212; color: #fff; font-family: sans-serif; padding: 20px; }
-        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-top: 30px; }
-        .item { background: #1e1e1e; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #333; }
-        .item img { max-width: 100%; border-radius: 4px; }
-        .item a { color: #00ca4e; text-decoration: none; display: block; margin-top: 10px; font-size: 14px; }
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
+        .item { background: #1e1e1e; padding: 10px; border-radius: 8px; border: 1px solid #333; text-align: center; }
+        
+        /* STYL KONSOLI BŁĘDÓW */
+        #debug-console { 
+            background: #000; 
+            color: #00ff00; 
+            padding: 15px; 
+            border: 1px solid #444; 
+            border-radius: 5px; 
+            font-family: monospace; 
+            margin-top: 20px; 
+            max-height: 200px; 
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .err-msg { color: #ff4757; }
         .refresh-btn { background: #00ca4e; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
@@ -17,47 +30,66 @@
     <h1>Moja Biblioteka</h1>
     <button class="refresh-btn" onclick="loadFiles()">ODŚWIEŻ LISTĘ</button>
 
-    <div class="gallery" id="gallery">
-        Ładowanie plików...
-    </div>
+    <div id="gallery" class="gallery">Ładowanie...</div>
+
+    <h3>Logi systemowe (Debug):</h3>
+    <div id="debug-console">Inicjalizacja systemu...</div>
 
     <script>
+        function log(msg, isError = false) {
+            const consoleBox = document.getElementById('debug-console');
+            const time = new Date().toLocaleTimeString();
+            const colorClass = isError ? 'class="err-msg"' : '';
+            consoleBox.innerHTML += `<div ${colorClass}>[${time}] ${msg}</div>`;
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+        }
+
         async function loadFiles() {
             const gallery = document.getElementById('gallery');
+            log("Próba pobrania listy plików z /api/list...");
+
             try {
                 const res = await fetch('/api/list');
-                const files = await res.json();
+                
+                log(`Status odpowiedzi serwera: ${res.status} ${res.statusText}`);
 
-                gallery.innerHTML = ''; // Czyścimy listę
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    throw new Error(`Serwer zwrócił błąd: ${JSON.stringify(errorData)}`);
+                }
+
+                const files = await res.json();
+                log(`Pobrano plików: ${files.length}`);
+
+                gallery.innerHTML = ''; 
 
                 files.forEach(file => {
                     const div = document.createElement('div');
                     div.className = 'item';
-
-                    // Jeśli to obrazek (png, jpg, gif)
-                    if (file.name.match(/\.(jpeg|jpg|gif|png)$/) != null) {
-                        div.innerHTML = `<img src="${file.link}" alt="${file.name}">`;
-                    } 
-                    // Jeśli to wideo (mp4, webm)
-                    else if (file.name.match(/\.(mp4|webm)$/) != null) {
-                        div.innerHTML = `<video width="100%" controls><source src="${file.link}" type="video/mp4"></video>`;
+                    
+                    // Sprawdzamy typ pliku
+                    if (file.contentType && file.contentType.includes('image')) {
+                        div.innerHTML = `<img src="${file.directLink}" style="max-width:100%">`;
+                    } else {
+                        div.innerHTML = `<div style="padding:20px; background:#333;">🎥</div>`;
                     }
-                    else {
-                        div.innerHTML = `<div style="height:100px; display:flex; align-items:center; justify-content:center; background:#333;">📁 Plik</div>`;
-                    }
-
-                    div.innerHTML += `<a href="${file.link}" target="_blank">${file.name}</a>`;
+                    
+                    div.innerHTML += `<p>${file.name}</p>`;
                     gallery.appendChild(div);
                 });
 
-                if(files.length === 0) gallery.innerHTML = "Folder jest pusty.";
+                if(files.length === 0) {
+                    gallery.innerHTML = "Folder jest pusty.";
+                    log("Folder GoFile nie zawiera żadnych plików.");
+                }
 
             } catch (e) {
-                gallery.innerHTML = "Błąd podczas ładowania plików.";
+                log(e.message, true);
+                gallery.innerHTML = `<span class="err-msg">Błąd krytyczny. Sprawdź konsolę poniżej.</span>`;
             }
         }
 
-        // Ładuj pliki od razu po wejściu na stronę
+        // Start
         loadFiles();
     </script>
 </body>
