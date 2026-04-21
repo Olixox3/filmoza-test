@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> #smt
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
@@ -76,7 +76,7 @@
     <div class="box">
         <h2>Upload do GoFile</h2>
         <input type="file" id="fileInput">
-        <button onclick="doUpload()" id="btn">WYŒLIJ PLIK</button>
+        <button onclick="doUpload()" id="btn">WYÅ’LIJ PLIK</button>
         <div id="status"></div>
     </div>
 
@@ -92,7 +92,7 @@
         formData.append('file', fileInput.files[0]);
 
         btn.disabled = true;
-        status.innerHTML = "Trwa wysy³anie... <br>(nie zamykaj strony)";
+        status.innerHTML = "Trwa wysyÂ³anie... <br>(nie zamykaj strony)";
 
         try {
             const res = await fetch('/api/upload', { method: 'POST', body: formData });
@@ -101,10 +101,10 @@
             if (data.status === 'ok') {
                 status.innerHTML = `<b>Sukces!</b><br><br>Link do pliku:<br><a href="${data.data.downloadPage}" target="_blank">${data.data.downloadPage}</a>`;
             } else {
-                status.innerHTML = `<span style="color:red">B³¹d: ${data.error || 'Nieznany'}</span>`;
+                status.innerHTML = `<span style="color:red">BÂ³Â¹d: ${data.error || 'Nieznany'}</span>`;
             }
         } catch (e) {
-            status.innerHTML = `<span style="color:red">B³¹d po³¹czenia z serwerem.</span>`;
+            status.innerHTML = `<span style="color:red">BÂ³Â¹d poÂ³Â¹czenia z serwerem.</span>`;
         } finally {
             btn.disabled = false;
         }
