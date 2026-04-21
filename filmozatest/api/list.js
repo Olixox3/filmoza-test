@@ -1,13 +1,16 @@
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
-    // Twoje poprawne dane
-    const folderId = 'Io1hsg'; 
+    // TWOJE NOWE DANE
+    const folderId = 'MbHKSt'; 
     const token = 'B5radPgpZ0YAHLCeJZDetXNQoKTWCaCI';
 
     try {
-        // Zapytanie do API GoFile o zawartość folderu
-        const response = await fetch(`https://api.gofile.io/getFolderContent?folderId=${folderId}`, {
+        // Próbujemy pobrać zawartość folderu
+        // Dodajemy token do URL oraz do Headers dla maksymalnej pewności
+        const apiUrl = `https://api.gofile.io/getFolderContent?folderId=${folderId}&token=${token}`;
+        
+        const response = await fetch(apiUrl, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -16,51 +19,39 @@ export default async function handler(req, res) {
 
         const text = await response.text();
 
-        // Sprawdzenie, czy GoFile nie wyrzuciło błędu tekstowego
+        // Obsługa błędów tekstowych GoFile
         if (text === "error-notFound") {
             return res.status(404).json({ 
-                error: "Folder nie został znaleziony.", 
-                help: "Upewnij się, że folder w panelu GoFile ma ustawienie Visibility: Public." 
+                error: "GoFile nie znalazło folderu MbHKSt.", 
+                debug: "Sprawdź czy w GoFile folder ma Visibility: Public." 
             });
         }
 
         if (text === "error-notAllowed") {
             return res.status(403).json({ 
-                error: "Brak dostępu.", 
-                help: "Twój token API może być nieprawidłowy lub wygasł." 
+                error: "Token odrzucony przez GoFile." 
             });
         }
 
-        // Próba sparsowania odpowiedzi do JSON
+        // Parsowanie JSON
         let data;
         try {
             data = JSON.parse(text);
         } catch (e) {
-            return res.status(500).json({ 
-                error: "Błąd formatu danych z GoFile", 
-                raw: text 
-            });
+            return res.status(500).json({ error: "Błąd JSON", raw: text });
         }
 
-        // Jeśli status to 'ok', wyciągamy listę plików
         if (data.status === 'ok') {
-            // Pliki mogą być w data.children (dla folderów) lub data.contents
+            // Wyciągamy pliki z children lub contents
             const content = data.data.children || data.data.contents || {};
-            const filesList = Object.values(content);
+            const files = Object.values(content);
             
-            res.status(200).json(filesList);
+            res.status(200).json(files);
         } else {
-            res.status(400).json({ 
-                error: data.status, 
-                details: data.data 
-            });
+            res.status(400).json({ error: data.status, details: data.data });
         }
 
     } catch (error) {
-        // Błąd krytyczny serwera (np. brak internetu lub node-fetch)
-        res.status(500).json({ 
-            error: "Internal Server Error", 
-            message: error.message 
-        });
+        res.status(500).json({ error: "Błąd Vercel", message: error.message });
     }
 }
