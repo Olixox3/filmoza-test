@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoFile Private Upload</title>
+    <style>
+        body {
+            background: #121212;
+            color: #fff;
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .box {
+            background: #1e1e1e;
+            padding: 30px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            color: #00ca4e;
+        }
+
+        input[type="file"] {
+            margin-bottom: 20px;
+            display: block;
+            width: 100%;
+        }
+
+        button {
+            background: #00ca4e;
+            color: #000;
+            border: none;
+            padding: 15px;
+            width: 100%;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+            button:hover {
+                background: #00ff62;
+            }
+
+            button:disabled {
+                background: #444;
+                cursor: not-allowed;
+            }
+
+        #status {
+            margin-top: 20px;
+            font-size: 14px;
+            word-break: break-all;
+        }
+
+        a {
+            color: #00ca4e;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="box">
+        <h2>Upload do GoFile</h2>
+        <input type="file" id="fileInput">
+        <button onclick="doUpload()" id="btn">WYŒLIJ PLIK</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+    async function doUpload() {
+        const fileInput = document.getElementById('fileInput');
+        const status = document.getElementById('status');
+        const btn = document.getElementById('btn');
+
+        if (!fileInput.files[0]) return alert("Wybierz plik!");
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        btn.disabled = true;
+        status.innerHTML = "Trwa wysy³anie... <br>(nie zamykaj strony)";
+
+        try {
+            const res = await fetch('/api/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            if (data.status === 'ok') {
+                status.innerHTML = `<b>Sukces!</b><br><br>Link do pliku:<br><a href="${data.data.downloadPage}" target="_blank">${data.data.downloadPage}</a>`;
+            } else {
+                status.innerHTML = `<span style="color:red">B³¹d: ${data.error || 'Nieznany'}</span>`;
+            }
+        } catch (e) {
+            status.innerHTML = `<span style="color:red">B³¹d po³¹czenia z serwerem.</span>`;
+        } finally {
+            btn.disabled = false;
+        }
+    }
+    </script>
+
+</body>
+</html>
