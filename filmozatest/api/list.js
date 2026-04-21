@@ -1,15 +1,12 @@
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
-    // UWAGA: Upewnij się, że ten ID jest poprawny. 
-    // To jest ID widoczne w linku, np. gofile.io/d/ADF89a59...
-    const folderId = 'adf89a59-c0b8-40f2-a9b8-aed24de11aab'; 
+    // Twoje poprawne dane
+    const folderId = 'Io1hsg'; 
     const token = 'B5radPgpZ0YAHLCeJZDetXNQoKTWCaCI';
 
     try {
-        // Logujemy próbę połączenia
-        console.log(`Pobieranie folderu: ${folderId}`);
-
+        // Zapytanie do API GoFile o zawartość folderu
         const response = await fetch(`https://api.gofile.io/getFolderContent?folderId=${folderId}`, {
             method: 'GET',
             headers: {
@@ -17,25 +14,53 @@ export default async function handler(req, res) {
             }
         });
 
-        // Sprawdzamy czy odpowiedź to w ogóle JSON
         const text = await response.text();
-        
+
+        // Sprawdzenie, czy GoFile nie wyrzuciło błędu tekstowego
+        if (text === "error-notFound") {
+            return res.status(404).json({ 
+                error: "Folder nie został znaleziony.", 
+                help: "Upewnij się, że folder w panelu GoFile ma ustawienie Visibility: Public." 
+            });
+        }
+
+        if (text === "error-notAllowed") {
+            return res.status(403).json({ 
+                error: "Brak dostępu.", 
+                help: "Twój token API może być nieprawidłowy lub wygasł." 
+            });
+        }
+
+        // Próba sparsowania odpowiedzi do JSON
         let data;
         try {
             data = JSON.parse(text);
         } catch (e) {
-            return res.status(500).json({ error: "Błąd formatu danych z GoFile", raw: text });
+            return res.status(500).json({ 
+                error: "Błąd formatu danych z GoFile", 
+                raw: text 
+            });
         }
 
+        // Jeśli status to 'ok', wyciągamy listę plików
         if (data.status === 'ok') {
-            // GoFile zwraca pliki w polu 'children'
-            const files = data.data.children ? Object.values(data.data.children) : [];
-            res.status(200).json(files);
+            // Pliki mogą być w data.children (dla folderów) lub data.contents
+            const content = data.data.children || data.data.contents || {};
+            const filesList = Object.values(content);
+            
+            res.status(200).json(filesList);
         } else {
-            // Przekazujemy błąd bezpośrednio z GoFile do Twojej konsoli na stronie
-            res.status(400).json({ error: data.status, message: "GoFile nie znalazło folderu. Sprawdź czy ID jest poprawne." });
+            res.status(400).json({ 
+                error: data.status, 
+                details: data.data 
+            });
         }
+
     } catch (error) {
-        res.status(500).json({ error: "Błąd serwera Vercel", details: error.message });
+        // Błąd krytyczny serwera (np. brak internetu lub node-fetch)
+        res.status(500).json({ 
+            error: "Internal Server Error", 
+            message: error.message 
+        });
     }
 }
